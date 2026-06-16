@@ -1,4 +1,5 @@
 const Request = require('../models/Request');
+const User = require('../models/User');
 
 const createRequest = async (req, res) => {
   try {
@@ -150,4 +151,30 @@ const getNearbyRequests = async (req, res) => {
   }
 };
 
-module.exports = { createRequest, getRequests, getMyRequests, getRequestById, updateRequest, deleteRequest, lockRequest, confirmRequest, getNearbyRequests };
+const rateRequest = async (req, res) => {
+  try {
+    const { score } = req.body;
+    if (!score || score < 1 || score > 5)
+      return res.status(400).json({ message: 'דירוג חייב להיות בין 1 ל-5' });
+    const request = await Request.findById(req.params.id);
+    if (!request) return res.status(404).json({ message: 'בקשה לא נמצאה' });
+    if (request.status !== 'closed')
+      return res.status(400).json({ message: 'ניתן לדרג רק בקשות שהושלמו' });
+    const userId = req.user._id.toString();
+    let ratedUserId;
+    if (request.requesterId.toString() === userId) ratedUserId = request.volunteerId;
+    else if (request.volunteerId?.toString() === userId) ratedUserId = request.requesterId;
+    else return res.status(403).json({ message: 'אין הרשאה לדרג בקשה זו' });
+    const ratedUser = await User.findById(ratedUserId);
+    if (!ratedUser) return res.status(404).json({ message: 'המשתמש לא נמצא' });
+    const { avg, count } = ratedUser.rating;
+    ratedUser.rating.avg = ((avg * count) + score) / (count + 1);
+    ratedUser.rating.count = count + 1;
+    await ratedUser.save();
+    res.json({ message: 'הדירוג נשמר בהצלחה', rating: ratedUser.rating });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+module.exports = { createRequest, getRequests, getMyRequests, getRequestById, updateRequest, deleteRequest, lockRequest, confirmRequest, getNearbyRequests, rateRequest };
