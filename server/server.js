@@ -46,13 +46,8 @@ app.use('/api/requests', require('./routes/requests'));
 // Attach io to app for use in controllers
 app.set('io', io);
 
-// Socket.io (will be expanded in sockets feature)
-io.on('connection', (socket) => {
-  console.log('Socket connected:', socket.id);
-  socket.on('disconnect', () => {
-    console.log('Socket disconnected:', socket.id);
-  });
-});
+const setupSockets = require('./sockets/index');
+setupSockets(io);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
