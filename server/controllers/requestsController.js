@@ -83,4 +83,43 @@ const deleteRequest = async (req, res) => {
   }
 };
 
-module.exports = { createRequest, getRequests, getMyRequests, getRequestById, updateRequest, deleteRequest };
+const lockRequest = async (req, res) => {
+  try {
+    const request = await Request.findOneAndUpdate(
+      { _id: req.params.id, status: 'open' },
+      { status: 'locked', volunteerId: req.user._id },
+      { new: true }
+    );
+    if (!request) return res.status(409).json({ message: 'הבקשה כבר נתפסה על ידי מתנדב אחר' });
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('request-locked', { requestId: request._id, volunteerName: req.user.name });
+      io.to(request.requesterId.toString()).emit('request-status-update', { requestId: request._id, status: 'locked' });
+    }
+    res.json(request);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const confirmRequest = async (req, res) => {
+  try {
+    const request = await Request.findById(req.params.id);
+    if (!request) return res.status(404).json({ message: 'בקשה לא נמצאה' });
+    const userId = req.user._id.toString();
+    if (request.requesterId.toString() === userId) request.requesterConfirmed = true;
+    else if (request.volunteerId?.toString() === userId) request.volunteerConfirmed = true;
+    else return res.status(403).json({ message: 'אין הרשאה לאשר בקשה זו' });
+    if (request.requesterConfirmed && request.volunteerConfirmed) {
+      request.status = 'closed';
+      const io = req.app.get('io');
+      if (io) io.emit('request-completed', { requestId: request._id });
+    }
+    await request.save();
+    res.json(request);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+module.exports = { createRequest, getRequests, getMyRequests, getRequestById, updateRequest, deleteRequest, lockRequest, confirmRequest };
