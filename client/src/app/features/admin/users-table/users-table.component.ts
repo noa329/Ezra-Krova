@@ -4,13 +4,14 @@ import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatChipsModule } from '@angular/material/chips';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-users-table',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatProgressSpinnerModule, MatSnackBarModule],
+  imports: [CommonModule, MatTableModule, MatButtonModule, MatProgressSpinnerModule, MatSnackBarModule, MatChipsModule],
   template: `
     <h2 style="color:#1a237e">ניהול משתמשים</h2>
     <mat-spinner *ngIf="loading" diameter="40" style="margin:60px auto;display:block"></mat-spinner>
@@ -26,7 +27,7 @@ import { environment } from '../../../../environments/environment';
         </ng-container>
         <ng-container matColumnDef="role">
           <th mat-header-cell *matHeaderCellDef>תפקיד</th>
-          <td mat-cell *matCellDef="let u">{{ u.role }}</td>
+          <td mat-cell *matCellDef="let u"><mat-chip [color]="u.role === 'admin' ? 'warn' : 'primary'" highlighted>{{ u.role }}</mat-chip></td>
         </ng-container>
         <ng-container matColumnDef="rating">
           <th mat-header-cell *matHeaderCellDef>דירוג</th>

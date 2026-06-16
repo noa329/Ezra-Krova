@@ -46,7 +46,7 @@ import { environment } from '../../../../environments/environment';
         <ng-container matColumnDef="delete">
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let r">
-            <button mat-button color="warn" (click)="deleteRequest(r._id)">מחק</button>
+            <button mat-icon-button color="warn" (click)="deleteRequest(r._id)" title="מחק">🗑️</button>
           </td>
         </ng-container>
         <tr mat-header-row *matHeaderRowDef="cols"></tr>
