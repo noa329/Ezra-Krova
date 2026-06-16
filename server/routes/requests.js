@@ -3,7 +3,7 @@ const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const { shabbatGuard } = require('../middleware/shabbatGuard');
 const {
-  createRequest, getRequests, getMyRequests, getRequestById, updateRequest, deleteRequest,
+  createRequest, getRequests, getMyRequests, getRequestById, updateRequest, deleteRequest, lockRequest, confirmRequest,
 } = require('../controllers/requestsController');
 
 router.post('/', protect, shabbatGuard, createRequest);
@@ -12,5 +12,7 @@ router.get('/my', protect, getMyRequests);
 router.get('/:id', protect, getRequestById);
 router.put('/:id', protect, updateRequest);
 router.delete('/:id', protect, deleteRequest);
+router.post('/:id/lock', protect, lockRequest);
+router.post('/:id/confirm', protect, confirmRequest);
 
 module.exports = router;
