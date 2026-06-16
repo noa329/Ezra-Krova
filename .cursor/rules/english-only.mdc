@@ -1,0 +1,20 @@
+---
+description: Enforce English-only code in this project
+globs: ["**/*.ts", "**/*.js", "**/*.scss", "**/*.html", "**/*.json", "**/*.md"]
+alwaysApply: true
+---
+
+# English-Only Code Rule
+
+All code in this project must be written in English only:
+
+- Variable names, function names, class names, and identifiers: English
+- Code comments: English
+- Console.log messages and debug output: English
+- Commit messages: English
+- File names: English
+
+Exceptions (Hebrew is allowed):
+- User-facing UI strings displayed to end users (button labels, error messages shown in the UI, placeholder text)
+- Hebrew string enum values that are part of the data model (e.g. category values: 'לינה', 'הסעה', 'מזון', 'תרופות', 'ילדים', 'נפשי')
+- Content inside PLANNING.md that describes the product for Hebrew-speaking stakeholders
