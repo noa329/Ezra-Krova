@@ -68,3 +68,8 @@ EzraKrova/
 - **שבת גארד**: השירות חסום בשבת (שישי 18:00 — מוצ"ש)
 - **2dsphere index**: נדרש עבור שאילתות מיקום ($near)
 - לפני הרצה יש להגדיר MONGO_URI ו-JWT_SECRET ב-.env
+
+## Development Guidelines
+
+- **Language:** All code, comments, variable names, and commit messages must be written in **English**.
+- **Exceptions:** User-facing UI strings shown to end users may remain in Hebrew, as may Hebrew enum values that are part of the data model.

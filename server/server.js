@@ -41,7 +41,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Routes (will be added in later features)
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
-// app.use('/api/requests', require('./routes/requests'));
+app.use('/api/requests', require('./routes/requests'));
 
 // Attach io to app for use in controllers
 app.set('io', io);

@@ -1,22 +1,22 @@
-# עזרה קרובה — תכנון הפרויקט
+# EzraKrova — Project Planning
 
-פלטפורמת עזרה הדדית בחירום המחברת בין אנשים הזקוקים לעזרה לבין מתנדבים, בזמן אמת, לפי מיקום וקטגוריה.
+A mutual-aid emergency platform that connects people in need of help with volunteers, in real time, by location and category.
 
 **Stack:** Node.js + Express + MongoDB (Atlas) + Angular 17 + Socket.io
 
 ---
 
-## החלטות ארכיטקטורה
+## Architecture Decisions
 
-- **מפות:** OpenStreetMap + Leaflet + Nominatim — חינמי, ללא מפתח API וללא כרטיס אשראי.
-- **בסיס נתונים:** MongoDB Atlas (ענן). ה-connection string נשמר רק ב-`.env` המקומי (נמצא ב-`.gitignore`) ולעולם לא נכנס לקומיט.
-- **Git:** כל פיצ'ר נבנה בברנץ' נפרד (`feature/<name>`) וממוזג ל-`main` בסיום השלב.
-- **Angular 17:** standalone components (ללא NgModules).
-- **משתמש אחיד:** כל משתמש רשום יכול גם לבקש עזרה וגם להתנדב. `admin` הוא תפקיד נפרד.
+- **Maps:** OpenStreetMap + Leaflet + Nominatim — free, no API key, no credit card required.
+- **Database:** MongoDB Atlas (cloud). The connection string is stored only in the local `.env` (listed in `.gitignore`) and is never committed.
+- **Git:** Every feature is built on a separate branch (`feature/<name>`) and merged into `main` at the end of each phase.
+- **Angular 17:** Standalone components (no NgModules).
+- **Unified user:** Any registered user can both request help and volunteer. `admin` is a separate role.
 
 ---
 
-## מבנה תיקיות עליון
+## Top-Level Folder Structure
 
 ```
 EzraKrova/
@@ -29,24 +29,24 @@ EzraKrova/
 
 ---
 
-## מודל הנתונים
+## Data Model
 
 ### Users
-- `name` (חובה), `phone` (ייחודי, משמש כשם משתמש), `password` (bcrypt)
-- `role`: `'user' | 'admin'` (ברירת מחדל `user`)
-- `profileImage` (נתיב קובץ, הועלה ב-multer)
+- `name` (required), `phone` (unique, used as username), `password` (bcrypt)
+- `role`: `'user' | 'admin'` (default `user`)
+- `profileImage` (file path, uploaded via multer)
 - `location`: GeoJSON Point `[lng, lat]`
 - `volunteerProfile`: `{ capabilities: [], radius: Number, isAvailable: Boolean }`
-- `rating`: `{ avg: Number, count: Number }` (שדרוג)
+- `rating`: `{ avg: Number, count: Number }` (upgrade)
 - `createdAt`
 
 ### Requests
-- `requesterId` (ref User, חובה)
+- `requesterId` (ref User, required)
 - `category`: `'לינה' | 'הסעה' | 'מזון' | 'תרופות' | 'ילדים' | 'נפשי'`
-- `description` (חובה), `location` (GeoJSON Point), `city`
-- `urgency`: `'high' | 'medium' | 'low'` (ברירת מחדל `medium`)
-- `status`: `'open' | 'locked' | 'closed' | 'disputed'` (ברירת מחדל `open`)
-- `volunteerId` (ref User, null עד נעילה)
+- `description` (required), `location` (GeoJSON Point), `city`
+- `urgency`: `'high' | 'medium' | 'low'` (default `medium`)
+- `status`: `'open' | 'locked' | 'closed' | 'disputed'` (default `open`)
+- `volunteerId` (ref User, null until locked)
 - `requesterConfirmed`, `volunteerConfirmed` (Boolean)
 - `createdAt`
 
@@ -55,97 +55,97 @@ EzraKrova/
 ## API Routes
 
 ### Auth — `/api/auth`
-- `POST /register` → רישום, מחזיר JWT
-- `POST /login` → התחברות, מחזיר JWT
+- `POST /register` → registration, returns JWT
+- `POST /login` → login, returns JWT
 
 ### Users — `/api/users`
-- `GET /me` → פרופיל נוכחי [auth]
-- `PUT /me` → עדכון פרופיל + volunteerProfile [auth]
-- `POST /me/image` → העלאת תמונת פרופיל (multer) [auth]
-- `GET /` → כל המשתמשים [admin]
-- `DELETE /:id` → מחיקה/חסימה [admin]
+- `GET /me` → current profile [auth]
+- `PUT /me` → update profile + volunteerProfile [auth]
+- `POST /me/image` → upload profile image (multer) [auth]
+- `GET /` → all users [admin]
+- `DELETE /:id` → delete/ban [admin]
 
 ### Requests — `/api/requests`
-- `POST /` → בקשה חדשה [auth + shabbatGuard]
-- `GET /` → כל הבקשות הפתוחות [auth]
-- `GET /nearby` → בקשות לפי מיקום + רדיוס + יכולות המתנדב [auth]
-- `GET /my` → הבקשות שלי [auth]
-- `GET /:id` → בקשה בודדת [auth]
-- `PUT /:id` → עדכון [owner]
-- `DELETE /:id` → מחיקה [owner / admin]
-- `POST /:id/lock` → נעילה אטומית (מניעת race) [auth]
-- `POST /:id/confirm` → אישור השלמה [auth — מבקש או מתנדב]
-- `POST /:id/rate` → דירוג הצד השני אחרי סגירה (שדרוג) [auth]
+- `POST /` → new request [auth + shabbatGuard]
+- `GET /` → all open requests [auth]
+- `GET /nearby` → requests filtered by location + radius + volunteer capabilities [auth]
+- `GET /my` → my requests [auth]
+- `GET /:id` → single request [auth]
+- `PUT /:id` → update [owner]
+- `DELETE /:id` → delete [owner / admin]
+- `POST /:id/lock` → atomic lock (race prevention) [auth]
+- `POST /:id/confirm` → confirm completion [auth — requester or volunteer]
+- `POST /:id/rate` → rate the other party after closure (upgrade) [auth]
 
 ---
 
 ## Socket.io Events
 
 **Server → Client:**
-- `new-request` — שידור לכל המחוברים כשנוצרת בקשה
-- `request-locked` — שידור כשמתנדב נועל בקשה (`requestId`, `volunteerName`)
-- `request-completed` — שידור כששני הצדדים אישרו
-- `request-status-update` — לחדר האישי של משתמש כשהסטטוס משתנה
+- `new-request` — broadcast to all connected clients when a request is created
+- `request-locked` — broadcast when a volunteer locks a request (`requestId`, `volunteerName`)
+- `request-completed` — broadcast when both parties have confirmed
+- `request-status-update` — sent to a user's private room when their request status changes
 
 **Client → Server:**
-- `join` — הצטרפות לחדר אישי (`userId`)
+- `join` — join a personal room (`userId`)
 
 ---
 
 ## Middleware
 
-1. `authMiddleware` — אימות JWT, צירוף `req.user`
-2. `adminMiddleware` — בדיקת `role === 'admin'`
-3. `shabbatGuard` — חסימת `POST /requests` בשישי 18:00 עד מוצ"ש
+1. `authMiddleware` — JWT verification, attaches `req.user`
+2. `adminMiddleware` — checks `role === 'admin'`
+3. `shabbatGuard` — blocks `POST /requests` from Friday 18:00 until Saturday night
    - `(day === 5 && hour >= 18) || day === 6` → `403 { message: 'השירות אינו זמין בשבת' }`
 
 ---
 
-## דרישות Mongoose
+## Mongoose Requirements
 
-1. `pre('save')` על User → האש סיסמה ב-bcrypt
-2. `toJSON()` על User → הסרת שדה `password` מכל תשובה
-3. `pre('save')` על Request → קביעת `city` מקואורדינטות (reverse geocode דרך Nominatim, נכשל בשקט אם אין רשת)
+1. `pre('save')` on User → hash password with bcrypt
+2. `toJSON()` on User → strip the `password` field from all responses
+3. `pre('save')` on Request → set `city` from coordinates (reverse geocode via Nominatim, fails silently when offline)
 
 ---
 
-## לוגיקה עסקית מרכזית
+## Core Business Logic
 
-### אלגוריתם התאמה (`GET /requests/nearby`)
-סינון בקשות לפי: בתוך רדיוס המתנדב + הקטגוריה ביכולות המתנדב + `status === 'open'`.
-מיון: דחיפות (high קודם), ואז מרחק (הקרוב קודם).
+### Matching Algorithm (`GET /requests/nearby`)
+Filter requests by: within the volunteer's radius + category is in the volunteer's capabilities + `status === 'open'`.
+Sort: urgency (high first), then distance (nearest first).
 
-### נעילה אטומית (`POST /requests/:id/lock`)
+### Atomic Lock (`POST /requests/:id/lock`)
 `findOneAndUpdate({ _id, status: 'open' }, { status: 'locked', volunteerId })`.
-אם התוצאה `null` → הבקשה כבר נתפסה → `409 Conflict`.
+If the result is `null` → request already taken → `409 Conflict`.
 
-### זרימת השלמה
-שני הצדדים חייבים לאשר (`requesterConfirmed` + `volunteerConfirmed`).
-כששניהם `true` → `status: 'closed'` + שידור `request-completed`.
-
----
-
-## העלאת תמונת פרופיל (multer)
-- `diskStorage`, יעד: `uploads/profiles/`
-- שם קובץ: `userId + timestamp + ext`
-- פילטר: תמונות בלבד (jpg, png, webp)
-- מגבלה: 5MB
-- הגשה סטטית: `app.use('/uploads', express.static('uploads'))`
+### Completion Flow
+Both parties must confirm (`requesterConfirmed` + `volunteerConfirmed`).
+When both are `true` → `status: 'closed'` + broadcast `request-completed`.
 
 ---
 
-## משתני סביבה (.env)
+## Profile Image Upload (multer)
+- `diskStorage`, destination: `uploads/profiles/`
+- Filename: `userId + timestamp + ext`
+- Filter: images only (jpg, png, webp)
+- Limit: 5 MB
+- Static serving: `app.use('/uploads', express.static('uploads'))`
+
+---
+
+## Environment Variables (.env)
 
 ```
 PORT=3000
-MONGO_URI=<Atlas connection string — לא נכנס לקומיט>
-JWT_SECRET=<יווצר אוטומטית>
+MONGO_URI=<Atlas connection string — never committed>
+JWT_SECRET=<auto-generated>
 CLIENT_URL=http://localhost:4200
 ```
 
 ---
 
-## מבנה Angular (feature-based)
+## Angular Structure (feature-based)
 
 ```
 src/app/features/
@@ -157,43 +157,43 @@ src/app/features/
   core/        interceptors (JWT), socket.service.ts
 ```
 
-### מסכים
-- **ציבורי:** `/home`, `/login`, `/register`
-- **משתמש מחובר:** `/requests`, `/requests/new`, `/requests/:id`, `/my-requests`, `/volunteer`, `/profile`
-- **אדמין:** `/admin/users`, `/admin/requests`
+### Screens
+- **Public:** `/home`, `/login`, `/register`
+- **Logged-in user:** `/requests`, `/requests/new`, `/requests/:id`, `/my-requests`, `/volunteer`, `/profile`
+- **Admin:** `/admin/users`, `/admin/requests`
 
 ---
 
-## שלבי בנייה (כל שלב = ברנץ')
+## Build Phases (each phase = one branch)
 
-### שרת
-1. `feature/server-setup` — Express + Mongo Atlas + Socket.io + helmet + rate-limit + `.env` + מבנה תיקיות
-2. `feature/auth` — User model (bcrypt pre-save + toJSON), authMiddleware, register/login עם JWT
-3. `feature/users` — routes לפרופיל, multer, ו-admin (list/delete)
+### Server
+1. `feature/server-setup` — Express + Mongo Atlas + Socket.io + helmet + rate-limit + `.env` + folder structure
+2. `feature/auth` — User model (bcrypt pre-save + toJSON), authMiddleware, register/login with JWT
+3. `feature/users` — profile routes, multer, and admin (list/delete)
 4. `feature/requests` — Request model (geo index + city pre-save), shabbatGuard, CRUD
-5. `feature/requests-lock-confirm` — נעילה אטומית (409) וזרימת אישור השלמה
-6. `feature/requests-nearby` — אלגוריתם התאמת בקשות קרובות
-7. `feature/rating` — דירוג ומוניטין אחרי סגירת בקשה
-8. `feature/sockets` — אירועי Socket.io
-9. `feature/ci-tests` — בדיקות Jest לשרת + GitHub Actions CI
+5. `feature/requests-lock-confirm` — atomic lock (409) and completion confirmation flow
+6. `feature/requests-nearby` — nearby request matching algorithm
+7. `feature/rating` — rating and reputation after request closure
+8. `feature/sockets` — Socket.io events
+9. `feature/ci-tests` — Jest tests for the server + GitHub Actions CI
 
-### לקוח
-10. `feature/client-setup` — פרויקט Angular 17 standalone + RTL/עברית + routing
+### Client
+10. `feature/client-setup` — Angular 17 standalone project + RTL/Hebrew + routing
 11. `feature/client-core` — JWT interceptor, socket.service, auth.service + auth.guard
-12. `feature/client-auth` — מסכי home/login/register
+12. `feature/client-auth` — home/login/register screens
 13. `feature/client-requests` — list/form/detail/my-requests/request-card
 14. `feature/client-volunteer` — volunteer-dashboard + profile-settings
-15. `feature/client-admin` — users-table + requests-table + ניהול מחלוקות (disputed)
-16. `feature/client-shared` — navbar, עיצוב כללי, אינטגרציית מפת Leaflet
+15. `feature/client-admin` — users-table + requests-table + dispute management (disputed)
+16. `feature/client-shared` — navbar, general styling, Leaflet map integration
 
 ---
 
-## שדרוגים שנכללים
-- דירוג ומוניטין למתנדבים.
-- Rate limiting + helmet לאבטחת ה-API.
-- בדיקות אוטומטיות (Jest) + GitHub Actions ל-CI.
-- מסך ניהול מחלוקות לאדמין (סטטוס `disputed`).
+## Included Upgrades
+- Rating and reputation system for volunteers.
+- Rate limiting + helmet for API security.
+- Automated tests (Jest) + GitHub Actions for CI.
+- Admin dispute management screen (status `disputed`).
 
-## שדרוגים לעתיד (לא עכשיו)
-- צ'אט בזמן אמת בין מבקש למתנדב.
-- התראות Push / PWA לרקע.
+## Future Upgrades (not now)
+- Real-time chat between requester and volunteer.
+- Push notifications / PWA background alerts.
