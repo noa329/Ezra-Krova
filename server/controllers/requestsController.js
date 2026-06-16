@@ -122,4 +122,32 @@ const confirmRequest = async (req, res) => {
   }
 };
 
-module.exports = { createRequest, getRequests, getMyRequests, getRequestById, updateRequest, deleteRequest, lockRequest, confirmRequest };
+const getNearbyRequests = async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user.volunteerProfile || !user.volunteerProfile.isAvailable)
+      return res.status(400).json({ message: 'פרופיל מתנדב לא מוגדר או לא זמין' });
+    const { radius = 10, capabilities = [] } = user.volunteerProfile;
+    const [lng, lat] = user.location.coordinates;
+    const radiusInMeters = radius * 1000;
+    const filter = {
+      status: 'open',
+      location: {
+        $near: {
+          $geometry: { type: 'Point', coordinates: [lng, lat] },
+          $maxDistance: radiusInMeters,
+        },
+      },
+    };
+    if (capabilities.length > 0) filter.category = { $in: capabilities };
+    const requests = await Request.find(filter)
+      .populate('requesterId', 'name phone profileImage rating');
+    const urgencyOrder = { high: 0, medium: 1, low: 2 };
+    requests.sort((a, b) => urgencyOrder[a.urgency] - urgencyOrder[b.urgency]);
+    res.json(requests);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+module.exports = { createRequest, getRequests, getMyRequests, getRequestById, updateRequest, deleteRequest, lockRequest, confirmRequest, getNearbyRequests };
