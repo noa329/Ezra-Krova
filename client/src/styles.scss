@@ -1,0 +1,33 @@
+@use '@angular/material' as mat;
+
+$primary: mat.define-palette(mat.$blue-palette, 700);
+$accent: mat.define-palette(mat.$orange-palette, 600);
+$warn: mat.define-palette(mat.$red-palette);
+
+$theme: mat.define-light-theme((
+  color: (primary: $primary, accent: $accent, warn: $warn),
+  typography: mat.define-typography-config($font-family: 'Rubik, sans-serif'),
+  density: 0,
+));
+
+@include mat.all-component-themes($theme);
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Rubik', sans-serif;
+  direction: rtl;
+  background: #f5f5f5;
+}
+
+.mat-mdc-card { border-radius: 12px !important; }
+
+.urgency-high { color: #d32f2f; font-weight: 600; }
+.urgency-medium { color: #f57c00; font-weight: 500; }
+.urgency-low { color: #388e3c; }
+
+.status-open { color: #1976d2; }
+.status-locked { color: #f57c00; }
+.status-closed { color: #388e3c; }
+.status-disputed { color: #d32f2f; }
