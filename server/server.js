@@ -7,6 +7,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const connectDB = require('./config/db');
+const { warnIfNotConfigured } = require('./config/cloudinary');
 
 const app = express();
 const server = http.createServer(app);
@@ -35,13 +36,16 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
-// Static uploads
+// Legacy local uploads (existing images only — new uploads go to Cloudinary)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Routes (will be added in later features)
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
+app.use('/api/volunteers', require('./routes/volunteers'));
 app.use('/api/requests', require('./routes/requests'));
+app.use('/api/geocode', require('./routes/geocode'));
+app.use('/api/admin', require('./routes/admin'));
+app.use('/api/notifications', require('./routes/notifications'));
 
 // Attach io to app for use in controllers
 app.set('io', io);
@@ -52,6 +56,7 @@ setupSockets(io);
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  warnIfNotConfigured();
 });
 
 module.exports = { app, server, io };

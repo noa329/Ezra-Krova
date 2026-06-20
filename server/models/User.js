@@ -24,6 +24,7 @@ const userSchema = new mongoose.Schema({
     avg: { type: Number, default: 0 },
     count: { type: Number, default: 0 },
   },
+  pushSubscriptions: { type: [mongoose.Schema.Types.Mixed], default: [] },
   createdAt: { type: Date, default: Date.now },
 });
 
