@@ -39,7 +39,7 @@ Without Cloudinary credentials the server starts normally but profile image uplo
 
 - **Ratings UI** — `POST /requests/:id/rate` exists; add client rating dialog after request closure ✅
 - **Leaflet map** — show request/volunteer locations on an interactive map (PLANNING.md) ✅
-- **Push notifications** — notify volunteers of nearby requests
+- **Push notifications** — notify volunteers of nearby requests ✅
 - **SMS verification** — phone OTP on registration
 - **Admin dashboard** — stats, charts, export
 - **Dispute resolution** — admin workflow for `disputed` requests
