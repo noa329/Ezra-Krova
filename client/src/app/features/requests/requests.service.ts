@@ -3,6 +3,18 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
+export function getRequesterId(request: HelpRequest): string | null {
+  const rid = request.requesterId;
+  if (!rid) return null;
+  if (typeof rid === 'string') return rid;
+  return rid._id?.toString?.() ?? rid.toString?.() ?? null;
+}
+
+export function isRequestOwner(request: HelpRequest, userId?: string | null): boolean {
+  if (!userId) return false;
+  return getRequesterId(request) === userId;
+}
+
 export interface HelpRequest {
   _id: string;
   requesterId: any;
@@ -38,4 +50,12 @@ export class RequestsService {
   lock(id: string): Observable<HelpRequest> { return this.http.post<HelpRequest>(`${this.base}/${id}/lock`, {}); }
   confirm(id: string): Observable<HelpRequest> { return this.http.post<HelpRequest>(`${this.base}/${id}/confirm`, {}); }
   rate(id: string, score: number): Observable<any> { return this.http.post(`${this.base}/${id}/rate`, { score }); }
+  dispute(id: string): Observable<HelpRequest> { return this.http.post<HelpRequest>(`${this.base}/${id}/dispute`, {}); }
+  resolveDispute(id: string, resolution: 'closed' | 'open'): Observable<HelpRequest> {
+    return this.http.post<HelpRequest>(`${this.base}/${id}/resolve-dispute`, { resolution });
+  }
+  getAllAdmin(): Observable<HelpRequest[]> { return this.http.get<HelpRequest[]>(`${this.base}/admin/all`); }
+  adminUpdateStatus(id: string, status: string): Observable<HelpRequest> {
+    return this.http.put<HelpRequest>(`${this.base}/${id}/status`, { status });
+  }
 }
