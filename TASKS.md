@@ -41,7 +41,7 @@ Without Cloudinary credentials the server starts normally but profile image uplo
 - **Leaflet map** — show request/volunteer locations on an interactive map (PLANNING.md) ✅
 - **Push notifications** — notify volunteers of nearby requests ✅
 - **SMS verification** — phone OTP on registration
-- **Admin dashboard** — stats, charts, export
+- **Admin dashboard** — stats, charts, export ✅
 - **Dispute resolution** — admin workflow for `disputed` requests
 - **Image cleanup** — delete old Cloudinary assets when user replaces profile photo
 - **Migrate legacy uploads** — one-time script to move existing `server/uploads/` files to Cloudinary
