@@ -26,6 +26,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/requests/request-form/request-form.component').then(m => m.RequestFormComponent),
   },
   {
+    path: 'requests/:id/edit',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/requests/request-form/request-form.component').then(m => m.RequestFormComponent),
+  },
+  {
     path: 'requests/:id',
     canActivate: [authGuard],
     loadComponent: () => import('./features/requests/request-detail/request-detail.component').then(m => m.RequestDetailComponent),
@@ -44,6 +49,11 @@ export const routes: Routes = [
     path: 'profile',
     canActivate: [authGuard],
     loadComponent: () => import('./features/volunteer/profile-settings/profile-settings.component').then(m => m.ProfileSettingsComponent),
+  },
+  {
+    path: 'admin',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/admin/admin-dashboard/admin-dashboard.component').then(m => m.AdminDashboardComponent),
   },
   {
     path: 'admin/users',

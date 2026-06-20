@@ -22,7 +22,7 @@ import { environment } from '../../../../environments/environment';
         <a mat-button routerLink="/requests" routerLinkActive="active-link">בקשות</a>
         <a mat-button routerLink="/my-requests" routerLinkActive="active-link">שלי</a>
         <a mat-button routerLink="/volunteer" routerLinkActive="active-link" *ngIf="hasVolunteerProfile">מתנדב</a>
-        <a mat-button routerLink="/admin/users" routerLinkActive="active-link" *ngIf="auth.isAdmin">אדמין</a>
+        <a mat-button routerLink="/admin" routerLinkActive="active-link" *ngIf="auth.isAdmin">אדמין</a>
         <mat-slide-toggle [checked]="isAvailable" (change)="toggleAvailability($event.checked)" color="accent" class="avail-toggle">
           {{ isAvailable ? 'זמין' : 'לא זמין' }}
         </mat-slide-toggle>
