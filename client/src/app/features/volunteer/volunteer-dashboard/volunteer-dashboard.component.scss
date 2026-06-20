@@ -1,0 +1,260 @@
+.dashboard-shell {
+  min-height: calc(100vh - 64px);
+  margin: -16px;
+  padding: 28px;
+  background: #f4f7fb;
+}
+
+.dashboard-grid {
+  display: grid;
+  direction: ltr;
+  grid-template-columns: minmax(0, 7fr) minmax(280px, 3fr);
+  gap: 24px;
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+.feed-column,
+.sidebar-column {
+  direction: rtl;
+}
+
+.hero-card,
+.request-card,
+.profile-card,
+.stats-card,
+.filters-card,
+.empty-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+}
+
+.hero-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 26px 30px;
+  margin-bottom: 20px;
+  background: linear-gradient(135deg, #eef6ff, #fff);
+}
+
+.dashboard-map {
+  display: block;
+  margin-bottom: 20px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+.hero-card h1 {
+  margin: 3px 0 8px;
+  color: #102a43;
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.hero-card p,
+.profile-card p,
+.empty-card,
+.requester,
+.stats-card span,
+.availability-box p {
+  color: #64748b;
+}
+
+.eyebrow {
+  color: #2563eb !important;
+  font-weight: 800;
+}
+
+.loading-spinner { margin: 70px auto; }
+.request-card { padding: 24px; margin-bottom: 18px; }
+
+.request-topline,
+.meta-row,
+.actions-row,
+.profile-card,
+.stats-card,
+.filters-header {
+  display: flex;
+  align-items: center;
+}
+
+.request-topline,
+.actions-row,
+.filters-header {
+  justify-content: space-between;
+}
+
+.requester {
+  margin: 0 0 6px;
+  font-weight: 700;
+}
+
+.request-card h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.3rem;
+  line-height: 1.45;
+}
+
+.match-badge {
+  min-width: 70px;
+  padding: 11px 12px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #15803d;
+  text-align: center;
+  font-weight: 900;
+}
+
+.meta-row {
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.category-pill,
+.urgency-pill,
+.distance,
+.verified {
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.category-pill {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.urgency-pill {
+  background: #fef3c7;
+  color: #92400e;
+
+  &.high {
+    background: #fee2e2;
+    color: #b91c1c;
+  }
+}
+
+.distance {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.distance mat-icon {
+  width: 18px; height: 18px; font-size: 18px;
+}
+
+.skills-row { margin-bottom: 22px; }
+
+.actions-row {
+  border-top: 1px solid #edf2f7;
+  padding-top: 18px;
+}
+
+.sidebar-column {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.profile-card,
+.stats-card,
+.filters-card {
+  padding: 20px;
+}
+
+.profile-card {
+  position: relative;
+  gap: 14px;
+}
+
+.avatar {
+  width: 56px; height: 56px;
+  border-radius: 18px;
+  background: #2563eb;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 1.55rem;
+  font-weight: 900;
+}
+
+.profile-card h2,
+.filters-card h2 {
+  margin: 0;
+  color: #102a43;
+}
+
+.profile-card p { margin: 4px 0 0; }
+
+.verified {
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.stats-card {
+  justify-content: space-around;
+  text-align: center;
+}
+
+.stats-card strong {
+  display: block;
+  color: #2563eb;
+  font-size: 1.7rem;
+}
+
+.stats-card span { font-size: 0.87rem; }
+.filters-card h3 { margin: 18px 0 10px; color: #334155; font-size: 1rem; }
+.filters-card mat-divider { margin: 18px 0; }
+.filters-card mat-slider { width: 100%; }
+
+.skills-filter {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.availability-box {
+  padding: 12px;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.availability-box p { margin: 4px 0; }
+
+.empty-card {
+  padding: 54px 24px;
+  text-align: center;
+}
+
+.empty-card mat-icon {
+  width: 54px; height: 54px;
+  color: #2563eb;
+  font-size: 54px;
+}
+
+@media (max-width: 900px) {
+  .dashboard-shell { padding: 16px; }
+  .dashboard-grid { grid-template-columns: 1fr; }
+  .feed-column { order: 2; }
+  .sidebar-column { order: 1; }
+
+  .hero-card,
+  .request-topline {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

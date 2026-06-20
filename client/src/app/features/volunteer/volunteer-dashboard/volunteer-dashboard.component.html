@@ -1,0 +1,123 @@
+<section class="dashboard-shell" dir="rtl">
+  <div class="dashboard-grid">
+    <main class="feed-column">
+      <div class="hero-card">
+        <div>
+          <p class="eyebrow">דשבורד מתנדב</p>
+          <h1>בקשות שמתאימות לך עכשיו</h1>
+          <p>התאמות מסודרות לפי קרבה, כישורים ודחיפות כדי שתוכל לעזור מהר.</p>
+        </div>
+        <button mat-stroked-button color="primary" (click)="load()">
+          <mat-icon>refresh</mat-icon>
+          רענן
+        </button>
+      </div>
+
+      <app-location-map
+        *ngIf="!loading && mapMarkers.length"
+        [markers]="mapMarkers"
+        height="260px"
+        class="dashboard-map">
+      </app-location-map>
+
+      <mat-spinner *ngIf="loading" diameter="44" class="loading-spinner"></mat-spinner>
+
+      <ng-container *ngIf="!loading">
+        <article class="request-card" *ngFor="let request of requests; trackBy: trackRequest">
+          <div class="request-topline">
+            <div>
+              <p class="requester">{{ request.requesterName }}</p>
+              <h2>{{ request.description }}</h2>
+            </div>
+            <span class="match-badge">{{ request.matchPercent }}%</span>
+          </div>
+
+          <div class="meta-row">
+            <span class="category-pill">{{ request.category }}</span>
+            <span class="urgency-pill" [class.high]="request.urgency === 'high'">{{ urgencyLabel(request.urgency) }}</span>
+            <span class="distance"><mat-icon>near_me</mat-icon>{{ request.distance | number:'1.0-1' }} ק"מ ממך</span>
+          </div>
+
+          <mat-chip-set class="skills-row" aria-label="כישורים נדרשים">
+            <mat-chip *ngFor="let skill of request.requiredSkills">{{ skill }}</mat-chip>
+          </mat-chip-set>
+
+          <div class="actions-row">
+            <button mat-flat-button color="primary" (click)="volunteerFor(request)">אני מתנדב</button>
+            <button mat-button color="warn" (click)="skip(request)">דלג</button>
+          </div>
+        </article>
+
+        <mat-card class="empty-card" *ngIf="requests.length === 0">
+          <mat-icon>volunteer_activism</mat-icon>
+          <h2>אין התאמות זמינות כרגע</h2>
+          <p>אפשר להרחיב רדיוס, לשנות כישורים או לחזור מאוחר יותר.</p>
+        </mat-card>
+      </ng-container>
+    </main>
+
+    <aside class="sidebar-column" *ngIf="volunteer as profile">
+      <mat-card class="profile-card">
+        <div class="avatar">{{ profile.name.charAt(0) }}</div>
+        <div>
+          <h2>{{ profile.name }}</h2>
+          <p>{{ profile.city || 'מיקום לא הוגדר' }}</p>
+        </div>
+        <span class="verified" *ngIf="profile.isVerified">מאומת</span>
+      </mat-card>
+
+      <mat-card class="stats-card">
+        <div>
+          <strong>{{ profile.completedHelps }}</strong>
+          <span>עזרות שהושלמו</span>
+        </div>
+        <div>
+          <strong>{{ profile.rating | number:'1.1-1' }}</strong>
+          <span>דירוג</span>
+        </div>
+      </mat-card>
+
+      <mat-card class="filters-card">
+        <div class="filters-header">
+          <h2>סינון התאמות</h2>
+          <mat-spinner *ngIf="savingFilters" diameter="20"></mat-spinner>
+        </div>
+
+        <mat-slide-toggle
+          color="primary"
+          [checked]="profile.availableNow"
+          (change)="toggleAvailability($event.checked)">
+          זמין עכשיו
+        </mat-slide-toggle>
+
+        <mat-divider></mat-divider>
+
+        <h3>כישורים</h3>
+        <div class="skills-filter">
+          <mat-checkbox
+            *ngFor="let skill of allSkills"
+            color="primary"
+            [checked]="profile.skills.includes(skill)"
+            (change)="toggleSkill(skill, $event.checked)">
+            {{ skill }}
+          </mat-checkbox>
+        </div>
+
+        <mat-divider></mat-divider>
+
+        <h3>רדיוס עזרה: {{ profile.helpRadius }} ק"מ</h3>
+        <mat-slider min="1" max="50" step="1" color="primary">
+          <input
+            matSliderThumb
+            [ngModel]="profile.helpRadius"
+            (valueChange)="updateRadius($event)">
+        </mat-slider>
+
+        <div class="availability-box" *ngIf="profile.availabilitySlots.length">
+          <h3>זמינות קרובה</h3>
+          <p *ngFor="let slot of profile.availabilitySlots">{{ slot }}</p>
+        </div>
+      </mat-card>
+    </aside>
+  </div>
+</section>

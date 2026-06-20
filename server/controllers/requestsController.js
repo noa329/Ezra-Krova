@@ -1,18 +1,21 @@
 const Request = require('../models/Request');
 const User = require('../models/User');
+const { notifyNearbyVolunteers } = require('./notificationsController');
 
 const createRequest = async (req, res) => {
   try {
-    const { category, description, location, urgency } = req.body;
+    const { category, description, location, urgency, city } = req.body;
     const request = await Request.create({
       requesterId: req.user._id,
       category,
       description,
       location,
       urgency,
+      city: city || '',
     });
     const io = req.app.get('io');
     if (io) io.emit('new-request', request);
+    notifyNearbyVolunteers(request).catch((err) => console.warn('Push notify failed:', err.message));
     res.status(201).json(request);
   } catch (err) {
     res.status(400).json({ message: err.message });
@@ -39,11 +42,83 @@ const getMyRequests = async (req, res) => {
   }
 };
 
+const getMatchedRequests = async (req, res) => {
+  try {
+    const { volunteerId } = req.query;
+    if (!volunteerId) return res.status(400).json({ message: 'חסר מזהה מתנדב' });
+    if (req.user._id.toString() !== volunteerId && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'אין הרשאה לצפות בהתאמות אלה' });
+    }
+
+    const volunteer = await User.findById(volunteerId).select('-password');
+    if (!volunteer) return res.status(404).json({ message: 'מתנדב לא נמצא' });
+
+    const profile = volunteer.volunteerProfile || {};
+    const skills = profile.capabilities || [];
+    const radius = profile.radius || 10;
+    const coordinates = volunteer.location?.coordinates || [];
+    const hasLocation = coordinates.length === 2 && (coordinates[0] !== 0 || coordinates[1] !== 0);
+    const filter = { status: 'open' };
+
+    if (skills.length) filter.category = { $in: skills };
+    if (hasLocation) {
+      filter.location = {
+        $near: {
+          $geometry: { type: 'Point', coordinates },
+          $maxDistance: radius * 1000,
+        },
+      };
+    }
+
+    const requests = await Request.find(filter).populate('requesterId', 'name').limit(30);
+    const matches = requests
+      .map(request => buildMatchResponse(request, volunteer, skills, radius))
+      .sort((a, b) => b.matchPercent - a.matchPercent);
+
+    res.json(matches);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const buildMatchResponse = (request, volunteer, skills, radius) => {
+  const distance = calculateDistanceKm(volunteer.location?.coordinates, request.location?.coordinates);
+  const skillScore = skills.includes(request.category) ? 45 : 20;
+  const distanceScore = Math.max(0, 35 - (distance / Math.max(radius, 1)) * 35);
+  const urgencyScore = { high: 20, medium: 12, low: 6 }[request.urgency] || 8;
+  const matchPercent = Math.min(99, Math.round(skillScore + distanceScore + urgencyScore));
+
+  return {
+    _id: request._id,
+    requesterName: request.requesterId?.name || 'מבקש עזרה',
+    category: request.category,
+    description: request.description,
+    distance,
+    matchPercent,
+    requiredSkills: [request.category],
+    urgency: request.urgency,
+    lat: request.location?.coordinates?.[1],
+    lng: request.location?.coordinates?.[0],
+  };
+};
+
+const calculateDistanceKm = (from, to) => {
+  if (!from || !to || from.length !== 2 || to.length !== 2) return 0;
+  const [lng1, lat1] = from;
+  const [lng2, lat2] = to;
+  const toRad = value => (value * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return Math.round(6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 10) / 10;
+};
+
 const getRequestById = async (req, res) => {
   try {
     const request = await Request.findById(req.params.id)
-      .populate('requesterId', 'name phone profileImage rating')
-      .populate('volunteerId', 'name phone profileImage rating');
+      .populate('requesterId', 'name phone profileImage rating location')
+      .populate('volunteerId', 'name phone profileImage rating location');
     if (!request) return res.status(404).json({ message: 'בקשה לא נמצאה' });
     res.json(request);
   } catch (err) {
@@ -53,16 +128,17 @@ const getRequestById = async (req, res) => {
 
 const updateRequest = async (req, res) => {
   try {
-    const request = await Request.findById(req.params.id);
-    if (!request) return res.status(404).json({ message: 'בקשה לא נמצאה' });
-    if (request.requesterId.toString() !== req.user._id.toString())
+    const { category, description, location, urgency, city } = req.body;
+    const request = await Request.findOneAndUpdate(
+      { _id: req.params.id, requesterId: req.user._id },
+      { category, description, location, urgency, city: city || '' },
+      { new: true, runValidators: true },
+    );
+    if (!request) {
+      const exists = await Request.findById(req.params.id);
+      if (!exists) return res.status(404).json({ message: 'בקשה לא נמצאה' });
       return res.status(403).json({ message: 'אין הרשאה לעדכן בקשה זו' });
-    const { category, description, location, urgency } = req.body;
-    if (category) request.category = category;
-    if (description) request.description = description;
-    if (location) request.location = location;
-    if (urgency) request.urgency = urgency;
-    await request.save();
+    }
     res.json(request);
   } catch (err) {
     res.status(400).json({ message: err.message });
@@ -71,13 +147,15 @@ const updateRequest = async (req, res) => {
 
 const deleteRequest = async (req, res) => {
   try {
-    const request = await Request.findById(req.params.id);
-    if (!request) return res.status(404).json({ message: 'בקשה לא נמצאה' });
-    const isOwner = request.requesterId.toString() === req.user._id.toString();
-    const isAdmin = req.user.role === 'admin';
-    if (!isOwner && !isAdmin)
+    const filter = req.user.role === 'admin'
+      ? { _id: req.params.id }
+      : { _id: req.params.id, requesterId: req.user._id };
+    const request = await Request.findOneAndDelete(filter);
+    if (!request) {
+      const exists = await Request.findById(req.params.id);
+      if (!exists) return res.status(404).json({ message: 'בקשה לא נמצאה' });
       return res.status(403).json({ message: 'אין הרשאה למחוק בקשה זו' });
-    await request.deleteOne();
+    }
     res.json({ message: 'הבקשה נמחקה בהצלחה' });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -151,6 +229,87 @@ const getNearbyRequests = async (req, res) => {
   }
 };
 
+const disputeRequest = async (req, res) => {
+  try {
+    const request = await Request.findById(req.params.id);
+    if (!request) return res.status(404).json({ message: 'בקשה לא נמצאה' });
+    if (request.status !== 'locked')
+      return res.status(400).json({ message: 'ניתן לדווח מחלוקת רק על בקשות נעולות' });
+    const userId = req.user._id.toString();
+    const isParty = request.requesterId.toString() === userId
+      || request.volunteerId?.toString() === userId;
+    if (!isParty) return res.status(403).json({ message: 'אין הרשאה לדווח מחלוקת' });
+    request.status = 'disputed';
+    await request.save();
+    const io = req.app.get('io');
+    if (io) {
+      io.to(request.requesterId.toString()).emit('request-status-update', { requestId: request._id, status: 'disputed' });
+      if (request.volunteerId) {
+        io.to(request.volunteerId.toString()).emit('request-status-update', { requestId: request._id, status: 'disputed' });
+      }
+    }
+    res.json(request);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const resolveDispute = async (req, res) => {
+  try {
+    const { resolution } = req.body;
+    if (!['closed', 'open'].includes(resolution))
+      return res.status(400).json({ message: 'פתרון לא חוקי' });
+    const request = await Request.findById(req.params.id);
+    if (!request) return res.status(404).json({ message: 'בקשה לא נמצאה' });
+    if (request.status !== 'disputed')
+      return res.status(400).json({ message: 'הבקשה אינה במצב מחלוקת' });
+    if (resolution === 'closed') {
+      request.status = 'closed';
+      request.requesterConfirmed = true;
+      request.volunteerConfirmed = true;
+    } else {
+      request.status = 'open';
+      request.volunteerId = null;
+      request.requesterConfirmed = false;
+      request.volunteerConfirmed = false;
+    }
+    await request.save();
+    res.json(request);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const getAllRequestsAdmin = async (req, res) => {
+  try {
+    const requests = await Request.find()
+      .populate('requesterId', 'name phone')
+      .populate('volunteerId', 'name phone')
+      .sort({ createdAt: -1 });
+    res.json(requests);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const adminUpdateStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    const allowed = ['open', 'locked', 'closed', 'disputed'];
+    if (!allowed.includes(status))
+      return res.status(400).json({ message: 'סטטוס לא חוקי' });
+    const request = await Request.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true, runValidators: true },
+    );
+    if (!request) return res.status(404).json({ message: 'בקשה לא נמצאה' });
+    res.json(request);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
 const rateRequest = async (req, res) => {
   try {
     const { score } = req.body;
@@ -177,4 +336,8 @@ const rateRequest = async (req, res) => {
   }
 };
 
-module.exports = { createRequest, getRequests, getMyRequests, getRequestById, updateRequest, deleteRequest, lockRequest, confirmRequest, getNearbyRequests, rateRequest };
+module.exports = {
+  createRequest, getRequests, getMyRequests, getMatchedRequests, getRequestById, updateRequest,
+  deleteRequest, lockRequest, confirmRequest, getNearbyRequests, rateRequest, disputeRequest,
+  resolveDispute, getAllRequestsAdmin, adminUpdateStatus,
+};
