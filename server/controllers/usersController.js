@@ -1,4 +1,6 @@
 const User = require('../models/User');
+const { isCloudinaryConfigured } = require('../config/cloudinary');
+const { deleteCloudinaryImage } = require('../services/cloudinaryUpload');
 
 const getMe = async (req, res) => {
   res.json(req.user);
@@ -20,15 +22,22 @@ const updateMe = async (req, res) => {
 
 const uploadImage = async (req, res) => {
   try {
+    if (!isCloudinaryConfigured()) {
+      return res.status(503).json({ message: 'שירות העלאת תמונות אינו זמין. פנה למנהל המערכת.' });
+    }
     if (!req.file) return res.status(400).json({ message: 'לא הועלתה תמונה' });
+    const existing = await User.findById(req.user._id).select('profileImage');
+    if (existing?.profileImage) {
+      await deleteCloudinaryImage(existing.profileImage);
+    }
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      { profileImage: `/uploads/profiles/${req.file.filename}` },
+      { profileImage: req.file.path },
       { new: true }
     );
     res.json({ profileImage: user.profileImage });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'שגיאה בהעלאת תמונה' });
   }
 };
 
