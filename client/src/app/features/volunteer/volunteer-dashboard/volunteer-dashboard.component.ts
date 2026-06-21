@@ -1,5 +1,6 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { forkJoin, Subscription } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
@@ -42,6 +43,7 @@ const URGENCY_LABELS: Record<MatchedRequest['urgency'], string> = {
     MatSlideToggleModule,
     MatSnackBarModule,
     LocationMapComponent,
+    RouterLink,
   ],
   templateUrl: './volunteer-dashboard.component.html',
   styleUrl: './volunteer-dashboard.component.scss',

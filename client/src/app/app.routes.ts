@@ -41,6 +41,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/requests/my-requests/my-requests.component').then(m => m.MyRequestsComponent),
   },
   {
+    path: 'my-claimed',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/requests/my-claimed-requests/my-claimed-requests.component').then(m => m.MyClaimedRequestsComponent),
+  },
+  {
     path: 'volunteer',
     canActivate: [authGuard],
     loadComponent: () => import('./features/volunteer/volunteer-dashboard/volunteer-dashboard.component').then(m => m.VolunteerDashboardComponent),

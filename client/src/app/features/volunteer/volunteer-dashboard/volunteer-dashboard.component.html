@@ -7,10 +7,13 @@
           <h1>בקשות שמתאימות לך עכשיו</h1>
           <p>התאמות מסודרות לפי קרבה, כישורים ודחיפות כדי שתוכל לעזור מהר.</p>
         </div>
-        <button mat-stroked-button color="primary" (click)="load()">
-          <mat-icon>refresh</mat-icon>
-          רענן
-        </button>
+        <div class="hero-actions">
+          <a mat-stroked-button color="primary" routerLink="/my-claimed">הבקשות שלקחתי</a>
+          <button mat-stroked-button color="primary" (click)="load()">
+            <mat-icon>refresh</mat-icon>
+            רענן
+          </button>
+        </div>
       </div>
 
       <app-location-map

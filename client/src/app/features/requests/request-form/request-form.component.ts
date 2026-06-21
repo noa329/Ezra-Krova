@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -8,18 +8,27 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { Router } from '@angular/router';
-import { RequestsService } from '../requests.service';
+import { ActivatedRoute, Router } from '@angular/router';
+import { RequestsService, isRequestOwner } from '../requests.service';
+import { LocationInputComponent } from '../../shared/location-input/location-input.component';
+import { AuthService } from '../../auth/auth.service';
 
 @Component({
   selector: 'app-request-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MatCardModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatButtonModule, MatProgressSpinnerModule, MatSnackBarModule],
+  imports: [
+    CommonModule, ReactiveFormsModule, MatCardModule, MatFormFieldModule, MatInputModule,
+    MatSelectModule, MatButtonModule, MatProgressSpinnerModule, MatSnackBarModule,
+    LocationInputComponent,
+  ],
   template: `
     <mat-card class="form-card">
-      <mat-card-header><mat-card-title>פתיחת בקשת עזרה</mat-card-title></mat-card-header>
+      <mat-card-header>
+        <mat-card-title>{{ editId ? 'עריכת בקשת עזרה' : 'פתיחת בקשת עזרה' }}</mat-card-title>
+      </mat-card-header>
       <mat-card-content>
-        <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <mat-spinner *ngIf="loadingRequest" diameter="40" style="margin:40px auto;display:block"></mat-spinner>
+        <form *ngIf="!loadingRequest" [formGroup]="form" (ngSubmit)="onSubmit()">
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>קטגוריה</mat-label>
             <mat-select formControlName="category">
@@ -38,15 +47,14 @@ import { RequestsService } from '../requests.service';
               <mat-option value="low">נמוך</mat-option>
             </mat-select>
           </mat-form-field>
-          <button mat-button type="button" (click)="detectLocation()" [disabled]="locating">
-            <mat-spinner diameter="18" *ngIf="locating" style="display:inline-block;margin-left:6px"></mat-spinner>
-            📍 זהה מיקום אוטומטי
-          </button>
-          <p style="color:#388e3c;font-size:0.9rem" *ngIf="locationSet">✅ מיקום נקלט</p>
+          <app-location-input formControlName="location" (cityChange)="form.patchValue({ city: $event })" />
+          <p class="error" *ngIf="form.get('location')?.invalid && form.get('location')?.touched">
+            יש לבחור מיקום — הקלד כתובת או השתמש במיקום המכשיר
+          </p>
           <p class="error" *ngIf="error">{{ error }}</p>
           <button mat-raised-button color="primary" type="submit" [disabled]="loading || form.invalid" class="full-width" style="margin-top:16px">
             <mat-spinner diameter="20" *ngIf="loading" style="display:inline-block;margin-left:8px"></mat-spinner>
-            שלח בקשה
+            {{ editId ? 'שמור שינויים' : 'שלח בקשה' }}
           </button>
         </form>
       </mat-card-content>
@@ -58,39 +66,82 @@ import { RequestsService } from '../requests.service';
     .error { color:#d32f2f; font-size:0.9rem; }
   `],
 })
-export class RequestFormComponent {
+export class RequestFormComponent implements OnInit {
+  private fb = inject(FormBuilder);
+  private route = inject(ActivatedRoute);
+
   categories = ['לינה', 'הסעה', 'מזון', 'תרופות', 'ילדים', 'נפשי'];
+  editId: string | null = null;
+  loadingRequest = false;
+  loading = false;
+  error = '';
+
   form = this.fb.group({
     category: ['', Validators.required],
     description: ['', [Validators.required, Validators.minLength(10)]],
     urgency: ['medium', Validators.required],
-    location: [null as any],
+    location: [null as any, Validators.required],
+    city: [''],
   });
-  loading = false;
-  locating = false;
-  locationSet = false;
-  error = '';
 
-  constructor(private fb: FormBuilder, private svc: RequestsService, private router: Router, private snack: MatSnackBar) {}
+  constructor(
+    private svc: RequestsService,
+    private auth: AuthService,
+    private router: Router,
+    private snack: MatSnackBar,
+  ) {}
 
-  detectLocation() {
-    this.locating = true;
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        this.form.patchValue({ location: { type: 'Point', coordinates: [pos.coords.longitude, pos.coords.latitude] } });
-        this.locationSet = true;
-        this.locating = false;
+  ngOnInit() {
+    this.editId = this.route.snapshot.paramMap.get('id');
+    if (!this.editId) return;
+
+    this.loadingRequest = true;
+    this.svc.getById(this.editId).subscribe({
+      next: (request) => {
+        if (!isRequestOwner(request, this.auth.currentUser?._id)) {
+          this.snack.open('אין הרשאה לערוך בקשה זו', 'סגור', { duration: 4000 });
+          this.router.navigate(['/requests']);
+          return;
+        }
+        this.form.patchValue({
+          category: request.category,
+          description: request.description,
+          urgency: request.urgency,
+          location: request.location,
+          city: request.city || '',
+        });
+        this.loadingRequest = false;
       },
-      () => { this.error = 'לא ניתן לזהות מיקום'; this.locating = false; }
-    );
+      error: () => {
+        this.loadingRequest = false;
+        this.router.navigate(['/my-requests']);
+      },
+    });
   }
 
   onSubmit() {
-    if (this.form.invalid) return;
-    this.loading = true; this.error = '';
-    this.svc.create(this.form.value as any).subscribe({
-      next: () => { this.snack.open('הבקשה נשלחה!', 'סגור', { duration: 3000 }); this.router.navigate(['/requests']); },
-      error: (err) => { this.error = err.error?.message || 'שגיאה בשליחת הבקשה'; this.loading = false; },
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
+
+    this.loading = true;
+    this.error = '';
+    const payload = this.form.value as any;
+    const request$ = this.editId
+      ? this.svc.update(this.editId, payload)
+      : this.svc.create(payload);
+
+    request$.subscribe({
+      next: () => {
+        const message = this.editId ? 'הבקשה עודכנה!' : 'הבקשה נשלחה!';
+        this.snack.open(message, 'סגור', { duration: 3000 });
+        this.router.navigate([this.editId ? '/my-requests' : '/requests']);
+      },
+      error: (err) => {
+        this.error = err.error?.message || (this.editId ? 'שגיאה בעדכון הבקשה' : 'שגיאה בשליחת הבקשה');
+        this.loading = false;
+      },
     });
   }
 }

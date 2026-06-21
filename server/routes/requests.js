@@ -4,7 +4,7 @@ const { protect } = require('../middleware/authMiddleware');
 const { adminOnly } = require('../middleware/adminMiddleware');
 const { shabbatGuard } = require('../middleware/shabbatGuard');
 const {
-  createRequest, getRequests, getMyRequests, getMatchedRequests, getRequestById, updateRequest,
+  createRequest, getRequests, getMyRequests, getMyClaimedRequests, getMatchedRequests, getRequestById, updateRequest,
   deleteRequest, lockRequest, confirmRequest, getNearbyRequests, rateRequest, disputeRequest,
   resolveDispute, getAllRequestsAdmin, adminUpdateStatus,
 } = require('../controllers/requestsController');
@@ -13,6 +13,7 @@ router.post('/', protect, shabbatGuard, createRequest);
 router.get('/', protect, getRequests);
 router.get('/admin/all', protect, adminOnly, getAllRequestsAdmin);
 router.get('/my', protect, getMyRequests);
+router.get('/my-claimed', protect, getMyClaimedRequests);
 router.get('/nearby', protect, getNearbyRequests);
 router.get('/matches', protect, getMatchedRequests);
 router.get('/:id', protect, getRequestById);

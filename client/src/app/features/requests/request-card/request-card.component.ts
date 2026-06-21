@@ -4,7 +4,8 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
-import { HelpRequest } from '../requests.service';
+import { HelpRequest, isRequestOwner } from '../requests.service';
+import { AuthService } from '../../auth/auth.service';
 
 const URGENCY_LABEL: Record<string, string> = { high: 'דחוף', medium: 'בינוני', low: 'נמוך' };
 const STATUS_LABEL: Record<string, string> = { open: 'פתוח', locked: 'נעול', closed: 'סגור', disputed: 'במחלוקת' };
@@ -34,6 +35,12 @@ const STATUS_LABEL: Record<string, string> = { open: 'פתוח', locked: 'נעו
       </mat-card-content>
       <mat-card-actions>
         <button mat-button color="primary" [routerLink]="['/requests', request._id]">פרטים</button>
+        <button mat-button color="primary" *ngIf="showOwnerActions && isOwner" [routerLink]="['/requests', request._id, 'edit']">
+          ✏️ עריכה
+        </button>
+        <button mat-button color="warn" *ngIf="showOwnerActions && isOwner" (click)="deleteClicked.emit(request._id)">
+          🗑️ מחיקה
+        </button>
         <button mat-raised-button color="accent" *ngIf="showLock && request.status === 'open'" (click)="lockClicked.emit(request._id)">
           <mat-icon>lock</mat-icon> אני מתנדב
         </button>
@@ -48,12 +55,19 @@ const STATUS_LABEL: Record<string, string> = { open: 'פתוח', locked: 'נעו
     .description { color:#333; line-height:1.6; margin:8px 0; }
     .meta { display:flex; gap:16px; align-items:center; font-size:0.85rem; color:#666; }
     .requester { font-size:0.85rem; color:#777; margin-top:4px; display:flex; align-items:center; gap:4px; }
+    mat-card-actions { display:flex; flex-wrap:wrap; gap:4px; }
   `],
 })
 export class RequestCardComponent {
   @Input() request!: HelpRequest;
   @Input() showLock = false;
+  @Input() showOwnerActions = false;
   @Output() lockClicked = new EventEmitter<string>();
+  @Output() deleteClicked = new EventEmitter<string>();
+
+  constructor(private auth: AuthService) {}
+
+  get isOwner() { return isRequestOwner(this.request, this.auth.currentUser?._id); }
   get urgencyLabel() { return URGENCY_LABEL[this.request.urgency] || ''; }
   get statusLabel() { return STATUS_LABEL[this.request.status] || ''; }
 }

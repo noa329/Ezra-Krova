@@ -42,6 +42,15 @@ const getMyRequests = async (req, res) => {
   }
 };
 
+const getMyClaimedRequests = async (req, res) => {
+  try {
+    const requests = await Request.find({ volunteerId: req.user._id, status: 'locked' }).sort({ createdAt: -1 });
+    res.json(requests);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 const getMatchedRequests = async (req, res) => {
   try {
     const { volunteerId } = req.query;
@@ -337,7 +346,7 @@ const rateRequest = async (req, res) => {
 };
 
 module.exports = {
-  createRequest, getRequests, getMyRequests, getMatchedRequests, getRequestById, updateRequest,
+  createRequest, getRequests, getMyRequests, getMyClaimedRequests, getMatchedRequests, getRequestById, updateRequest,
   deleteRequest, lockRequest, confirmRequest, getNearbyRequests, rateRequest, disputeRequest,
   resolveDispute, getAllRequestsAdmin, adminUpdateStatus,
 };

@@ -42,6 +42,7 @@ export class RequestsService {
   }
 
   getMy(): Observable<HelpRequest[]> { return this.http.get<HelpRequest[]>(`${this.base}/my`); }
+  getMyClaimed(): Observable<HelpRequest[]> { return this.http.get<HelpRequest[]>(`${this.base}/my-claimed`); }
   getById(id: string): Observable<HelpRequest> { return this.http.get<HelpRequest>(`${this.base}/${id}`); }
   getNearby(): Observable<HelpRequest[]> { return this.http.get<HelpRequest[]>(`${this.base}/nearby`); }
   create(data: Partial<HelpRequest>): Observable<HelpRequest> { return this.http.post<HelpRequest>(this.base, data); }

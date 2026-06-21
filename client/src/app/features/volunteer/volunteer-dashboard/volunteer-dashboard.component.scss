@@ -41,6 +41,13 @@
   background: linear-gradient(135deg, #eef6ff, #fff);
 }
 
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
 .dashboard-map {
   display: block;
   margin-bottom: 20px;

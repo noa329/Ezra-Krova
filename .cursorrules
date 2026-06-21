@@ -1,0 +1,4 @@
+# Environment Variables
+
+Never modify or overwrite the .env file.
+Read existing environment variables from .env as-is.

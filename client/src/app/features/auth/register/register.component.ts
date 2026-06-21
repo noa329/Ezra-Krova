@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -53,6 +53,7 @@ import { AuthService } from '../auth.service';
   `],
 })
 export class RegisterComponent {
+  private fb = inject(FormBuilder);
   form = this.fb.group({
     name: ['', Validators.required],
     phone: ['', Validators.required],
@@ -61,7 +62,7 @@ export class RegisterComponent {
   loading = false;
   error = '';
 
-  constructor(private fb: FormBuilder, private auth: AuthService, private router: Router) {}
+  constructor(private auth: AuthService, private router: Router) {}
 
   onSubmit() {
     if (this.form.invalid) return;

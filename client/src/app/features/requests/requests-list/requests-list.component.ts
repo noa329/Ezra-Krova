@@ -5,10 +5,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
 import { RouterLink } from '@angular/router';
 import { RequestsService, HelpRequest } from '../requests.service';
 import { RequestCardComponent } from '../request-card/request-card.component';
 import { SocketService } from '../../../core/socket.service';
+import { ConfirmDialogComponent } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { Subscription } from 'rxjs';
 
 const CATEGORIES = ['הכל', 'לינה', 'הסעה', 'מזון', 'תרופות', 'ילדים', 'נפשי'];
@@ -29,7 +31,14 @@ const CATEGORIES = ['הכל', 'לינה', 'הסעה', 'מזון', 'תרופות'
         <div class="tab-content">
           <mat-spinner *ngIf="loading" diameter="40" style="margin:40px auto;display:block"></mat-spinner>
           <div *ngIf="!loading">
-            <app-request-card *ngFor="let r of requests" [request]="r" [showLock]="true" (lockClicked)="onLock($event)" />
+            <app-request-card
+              *ngFor="let r of requests"
+              [request]="r"
+              [showLock]="true"
+              [showOwnerActions]="true"
+              (lockClicked)="onLock($event)"
+              (deleteClicked)="onDelete($event)"
+            />
             <p *ngIf="requests.length === 0" class="empty-state">אין בקשות פתוחות בקטגוריה זו</p>
           </div>
         </div>
@@ -50,7 +59,7 @@ export class RequestsListComponent implements OnInit, OnDestroy {
   selectedCategory = '';
   private sub!: Subscription;
 
-  constructor(private svc: RequestsService, private socket: SocketService, private snack: MatSnackBar) {}
+  constructor(private svc: RequestsService, private socket: SocketService, private snack: MatSnackBar, private dialog: MatDialog) {}
 
   ngOnInit() {
     this.load();
@@ -80,6 +89,26 @@ export class RequestsListComponent implements OnInit, OnDestroy {
     this.svc.lock(id).subscribe({
       next: () => { this.snack.open('נרשמת בהצלחה כמתנדב!', 'סגור', { duration: 3000 }); this.load(); },
       error: (err) => this.snack.open(err.error?.message || 'שגיאה בנעילה', 'סגור', { duration: 4000 }),
+    });
+  }
+
+  onDelete(id: string) {
+    this.dialog.open(ConfirmDialogComponent, {
+      width: '360px',
+      data: {
+        title: 'מחיקת בקשה',
+        message: 'האם למחוק את הבקשה? פעולה זו אינה ניתנת לביטול.',
+        confirmText: 'מחק',
+      },
+    }).afterClosed().subscribe((confirmed) => {
+      if (!confirmed) return;
+      this.svc.delete(id).subscribe({
+        next: () => {
+          this.requests = this.requests.filter(r => r._id !== id);
+          this.snack.open('הבקשה נמחקה', 'סגור', { duration: 3000 });
+        },
+        error: (err) => this.snack.open(err.error?.message || 'שגיאה', 'סגור', { duration: 4000 }),
+      });
     });
   }
 }

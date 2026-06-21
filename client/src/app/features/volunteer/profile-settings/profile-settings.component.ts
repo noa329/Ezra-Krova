@@ -12,13 +12,19 @@ import { MatDividerModule } from '@angular/material/divider';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../auth/auth.service';
 import { environment } from '../../../../environments/environment';
+import { resolveProfileImageUrl } from '../../../core/image.util';
+import { LocationInputComponent } from '../../shared/location-input/location-input.component';
 
 const CAPABILITIES = ['לינה', 'הסעה', 'מזון', 'תרופות', 'ילדים', 'נפשי'];
 
 @Component({
   selector: 'app-profile-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatCheckboxModule, MatSliderModule, MatSlideToggleModule, MatButtonModule, MatProgressSpinnerModule, MatSnackBarModule, MatDividerModule],
+  imports: [
+    CommonModule, FormsModule, MatCardModule, MatCheckboxModule, MatSliderModule,
+    MatSlideToggleModule, MatButtonModule, MatProgressSpinnerModule, MatSnackBarModule,
+    MatDividerModule, LocationInputComponent,
+  ],
   template: `
     <div class="settings-wrapper">
       <mat-card>
@@ -33,6 +39,8 @@ const CAPABILITIES = ['לינה', 'הסעה', 'מזון', 'תרופות', 'יל�
             </label>
           </div>
           <mat-divider style="margin:20px 0"></mat-divider>
+          <h3>מיקום</h3>
+          <app-location-input [(ngModel)]="userLocation" label="מיקום לחיפוש בקשות קרובות" />
           <mat-slide-toggle [(ngModel)]="isAvailable" color="primary">
             {{ isAvailable ? '🟢 זמין לעזרה' : '🔴 לא זמין כרגע' }}
           </mat-slide-toggle>
@@ -74,6 +82,7 @@ export class ProfileSettingsComponent implements OnInit {
   isAvailable = false;
   saving = false;
   imageUrl = '';
+  userLocation: { type: 'Point'; coordinates: [number, number] } | null = null;
 
   constructor(private auth: AuthService, private http: HttpClient, private snack: MatSnackBar) {}
 
@@ -83,7 +92,10 @@ export class ProfileSettingsComponent implements OnInit {
       this.capabilities = u.volunteerProfile?.capabilities || [];
       this.radius = u.volunteerProfile?.radius || 10;
       this.isAvailable = u.volunteerProfile?.isAvailable || false;
-      this.imageUrl = u.profileImage ? `http://localhost:3000${u.profileImage}` : '';
+      this.imageUrl = resolveProfileImageUrl(u.profileImage);
+      if (u.location?.coordinates?.[0] && u.location?.coordinates?.[1]) {
+        this.userLocation = { type: 'Point', coordinates: u.location.coordinates };
+      }
     }
   }
 
@@ -93,22 +105,28 @@ export class ProfileSettingsComponent implements OnInit {
 
   save() {
     this.saving = true;
-    this.http.put(`${environment.apiUrl}/users/me`, {
+    const payload: any = {
       volunteerProfile: { capabilities: this.capabilities, radius: this.radius, isAvailable: this.isAvailable },
-    }).subscribe({
+    };
+    if (this.userLocation) payload.location = this.userLocation;
+    this.http.put(`${environment.apiUrl}/users/me`, payload).subscribe({
       next: () => { this.auth.refreshUser().subscribe(); this.snack.open('ההגדרות נשמרו!', 'סגור', { duration: 3000 }); this.saving = false; },
       error: (err) => { this.snack.open(err.error?.message || 'שגיאה', 'סגור', { duration: 4000 }); this.saving = false; },
     });
   }
 
-  onFileChange(event: any) {
-    const file = event.target.files[0];
+  onFileChange(event: Event) {
+    const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
     const fd = new FormData();
-    fd.append('image', file);
+    fd.append('profileImage', file);
     this.http.post(`${environment.apiUrl}/users/me/image`, fd).subscribe({
-      next: (res: any) => { this.imageUrl = `http://localhost:3000${res.profileImage}`; this.snack.open('תמונה הועלתה!', 'סגור', { duration: 3000 }); },
-      error: () => this.snack.open('שגיאה בהעלאת תמונה', 'סגור', { duration: 4000 }),
+      next: (res: any) => {
+        this.imageUrl = resolveProfileImageUrl(res.profileImage);
+        this.auth.refreshUser().subscribe();
+        this.snack.open('תמונה הועלתה!', 'סגור', { duration: 3000 });
+      },
+      error: (err) => this.snack.open(err.error?.message || 'שגיאה בהעלאת תמונה', 'סגור', { duration: 4000 }),
     });
   }
 }
