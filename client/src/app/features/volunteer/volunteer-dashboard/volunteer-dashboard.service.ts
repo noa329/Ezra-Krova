@@ -19,6 +19,7 @@ export interface VolunteerProfile {
 
 export interface MatchedRequest {
   _id: string;
+  requesterId?: string;
   requesterName: string;
   category: string;
   description: string;

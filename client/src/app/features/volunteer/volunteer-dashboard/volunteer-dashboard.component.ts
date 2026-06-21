@@ -91,7 +91,7 @@ export class VolunteerDashboardComponent implements OnInit, OnDestroy {
     }).subscribe({
       next: ({ volunteer, requests }) => {
         this.volunteer = volunteer;
-        this.requests = requests;
+        this.requests = this.excludeOwnRequests(requests);
         this.loading = false;
       },
       error: (err) => {
@@ -104,7 +104,7 @@ export class VolunteerDashboardComponent implements OnInit, OnDestroy {
   loadMatches() {
     if (!this.volunteerId) return;
     this.dashboard.getMatches(this.volunteerId).subscribe({
-      next: (requests) => { this.requests = requests; },
+      next: (requests) => { this.requests = this.excludeOwnRequests(requests); },
       error: (err) => this.snack.open(err.error?.message || 'שגיאה בטעינת התאמות', 'סגור', { duration: 4000 }),
     });
   }
@@ -204,5 +204,9 @@ export class VolunteerDashboardComponent implements OnInit, OnDestroy {
   private handleFilterError(err: any) {
     this.savingFilters = false;
     this.snack.open(err.error?.message || 'שגיאה בעדכון הסינון', 'סגור', { duration: 4000 });
+  }
+
+  private excludeOwnRequests(requests: MatchedRequest[]): MatchedRequest[] {
+    return requests.filter(r => r.requesterId !== this.volunteerId);
   }
 }

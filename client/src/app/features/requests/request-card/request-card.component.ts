@@ -42,7 +42,7 @@ const STATUS_LABEL: Record<string, string> = { open: 'פתוח', locked: 'נעו
         <button mat-button color="warn" *ngIf="showOwnerActions && isOwner" (click)="deleteClicked.emit(request._id)">
           🗑️ מחיקה
         </button>
-        <button mat-raised-button color="accent" *ngIf="showLock && request.status === 'open'" (click)="lockClicked.emit(request._id)">
+        <button mat-raised-button color="accent" *ngIf="showLock && request.status === 'open' && !isOwner" (click)="lockClicked.emit(request._id)">
           <mat-icon>lock</mat-icon> אני מתנדב
         </button>
       </mat-card-actions>

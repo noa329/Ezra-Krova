@@ -88,6 +88,8 @@ const getMatchedRequests = async (req, res) => {
 
     const requests = await Request.find(filter).populate('requesterId', 'name').limit(30);
     const matches = requests
+      .filter(request => request.requesterId?._id?.toString() !== volunteerId
+        && request.requesterId?.toString() !== volunteerId)
       .map(request => buildMatchResponse(request, volunteer, skills, radius))
       .sort((a, b) => b.matchPercent - a.matchPercent);
 
@@ -106,6 +108,7 @@ const buildMatchResponse = (request, volunteer, skills, radius) => {
 
   return {
     _id: request._id,
+    requesterId: request.requesterId?._id?.toString() || request.requesterId?.toString(),
     requesterName: request.requesterId?.name || 'מבקש עזרה',
     category: request.category,
     description: request.description,
@@ -182,6 +185,11 @@ const deleteRequest = async (req, res) => {
 
 const lockRequest = async (req, res) => {
   try {
+    const existing = await Request.findById(req.params.id);
+    if (!existing) return res.status(404).json({ message: 'בקשה לא נמצאה' });
+    if (existing.requesterId.toString() === req.user._id.toString()) {
+      return res.status(400).json({ message: 'לא ניתן להתנדב לבקשה שפתחת בעצמך' });
+    }
     const request = await Request.findOneAndUpdate(
       { _id: req.params.id, status: 'open' },
       { status: 'locked', volunteerId: req.user._id },
@@ -239,9 +247,12 @@ const getNearbyRequests = async (req, res) => {
     if (capabilities.length > 0) filter.category = { $in: capabilities };
     const requests = await Request.find(filter)
       .populate('requesterId', 'name phone profileImage rating');
+    const userId = user._id.toString();
+    const filtered = requests.filter(r => r.requesterId?._id?.toString() !== userId
+      && r.requesterId?.toString() !== userId);
     const urgencyOrder = { high: 0, medium: 1, low: 2 };
-    requests.sort((a, b) => urgencyOrder[a.urgency] - urgencyOrder[b.urgency]);
-    res.json(requests);
+    filtered.sort((a, b) => urgencyOrder[a.urgency] - urgencyOrder[b.urgency]);
+    res.json(filtered);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
