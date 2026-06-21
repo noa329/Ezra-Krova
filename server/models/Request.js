@@ -16,6 +16,8 @@ const requestSchema = new mongoose.Schema({
   volunteerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   requesterConfirmed: { type: Boolean, default: false },
   volunteerConfirmed: { type: Boolean, default: false },
+  // When null, consumers should treat createdAt as the implicit preferred time.
+  preferredTime: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now },
 });
 

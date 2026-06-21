@@ -4,7 +4,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
-import { HelpRequest, isRequestOwner } from '../requests.service';
+import { HelpRequest, isRequestOwner, formatPreferredTime } from '../requests.service';
 import { AuthService } from '../../auth/auth.service';
 
 const URGENCY_LABEL: Record<string, string> = { high: 'דחוף', medium: 'בינוני', low: 'נמוך' };
@@ -26,6 +26,7 @@ const STATUS_LABEL: Record<string, string> = { open: 'פתוח', locked: 'נעו
         <p class="description">{{ request.description }}</p>
         <div class="meta">
           <span *ngIf="request.city"><mat-icon inline>location_on</mat-icon> {{ request.city }}</span>
+          <span *ngIf="request.preferredTime">מועד מועדף: {{ formatPreferredTime(request.preferredTime) }}</span>
           <span [class]="'status-' + request.status">{{ statusLabel }}</span>
         </div>
         <div class="requester" *ngIf="request.requesterId?.name">
@@ -64,6 +65,7 @@ export class RequestCardComponent {
   @Input() showOwnerActions = false;
   @Output() lockClicked = new EventEmitter<string>();
   @Output() deleteClicked = new EventEmitter<string>();
+  formatPreferredTime = formatPreferredTime;
 
   constructor(private auth: AuthService) {}
 

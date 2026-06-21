@@ -15,6 +15,18 @@ export function isRequestOwner(request: HelpRequest, userId?: string | null): bo
   return getRequesterId(request) === userId;
 }
 
+export function formatPreferredTime(value: string | Date): string {
+  const d = new Date(value);
+  return d.toLocaleString('he-IL', {
+    day: 'numeric',
+    month: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
 export interface HelpRequest {
   _id: string;
   requesterId: any;
@@ -27,6 +39,7 @@ export interface HelpRequest {
   volunteerId?: any;
   requesterConfirmed: boolean;
   volunteerConfirmed: boolean;
+  preferredTime?: string | Date | null;
   createdAt: string;
 }
 

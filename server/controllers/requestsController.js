@@ -2,9 +2,15 @@ const Request = require('../models/Request');
 const User = require('../models/User');
 const { notifyNearbyVolunteers } = require('./notificationsController');
 
+const parsePreferredTime = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
 const createRequest = async (req, res) => {
   try {
-    const { category, description, location, urgency, city } = req.body;
+    const { category, description, location, urgency, city, preferredTime } = req.body;
     const request = await Request.create({
       requesterId: req.user._id,
       category,
@@ -12,6 +18,7 @@ const createRequest = async (req, res) => {
       location,
       urgency,
       city: city || '',
+      preferredTime: parsePreferredTime(preferredTime),
     });
     const io = req.app.get('io');
     if (io) io.emit('new-request', request);
@@ -137,10 +144,12 @@ const getRequestById = async (req, res) => {
 
 const updateRequest = async (req, res) => {
   try {
-    const { category, description, location, urgency, city } = req.body;
+    const { category, description, location, urgency, city, preferredTime } = req.body;
+    const update = { category, description, location, urgency, city: city || '' };
+    if (preferredTime !== undefined) update.preferredTime = parsePreferredTime(preferredTime);
     const request = await Request.findOneAndUpdate(
       { _id: req.params.id, requesterId: req.user._id },
-      { category, description, location, urgency, city: city || '' },
+      update,
       { new: true, runValidators: true },
     );
     if (!request) {

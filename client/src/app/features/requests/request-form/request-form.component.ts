@@ -9,7 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router } from '@angular/router';
-import { RequestsService, isRequestOwner } from '../requests.service';
+import { RequestsService, HelpRequest, isRequestOwner } from '../requests.service';
 import { LocationInputComponent } from '../../shared/location-input/location-input.component';
 import { AuthService } from '../../auth/auth.service';
 
@@ -47,6 +47,11 @@ import { AuthService } from '../../auth/auth.service';
               <mat-option value="low">נמוך</mat-option>
             </mat-select>
           </mat-form-field>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>מועד מועדף (אופציונלי)</mat-label>
+            <input matInput type="datetime-local" formControlName="preferredTime" />
+            <mat-hint>אם לא תבחר/י מועד, הבקשה תוצג עם שעת הפתיחה שלה</mat-hint>
+          </mat-form-field>
           <app-location-input formControlName="location" (cityChange)="form.patchValue({ city: $event })" />
           <p class="error" *ngIf="form.get('location')?.invalid && form.get('location')?.touched">
             יש לבחור מיקום — הקלד כתובת או השתמש במיקום המכשיר
@@ -80,6 +85,7 @@ export class RequestFormComponent implements OnInit {
     category: ['', Validators.required],
     description: ['', [Validators.required, Validators.minLength(10)]],
     urgency: ['medium', Validators.required],
+    preferredTime: [''],
     location: [null as any, Validators.required],
     city: [''],
   });
@@ -107,6 +113,7 @@ export class RequestFormComponent implements OnInit {
           category: request.category,
           description: request.description,
           urgency: request.urgency,
+          preferredTime: request.preferredTime ? this.toDatetimeLocalValue(request.preferredTime) : '',
           location: request.location,
           city: request.city || '',
         });
@@ -127,7 +134,11 @@ export class RequestFormComponent implements OnInit {
 
     this.loading = true;
     this.error = '';
-    const payload = this.form.value as any;
+    const { preferredTime, ...rest } = this.form.value;
+    const payload = {
+      ...rest,
+      preferredTime: preferredTime ? new Date(preferredTime).toISOString() : null,
+    } as Partial<HelpRequest>;
     const request$ = this.editId
       ? this.svc.update(this.editId, payload)
       : this.svc.create(payload);
@@ -143,5 +154,11 @@ export class RequestFormComponent implements OnInit {
         this.loading = false;
       },
     });
+  }
+
+  private toDatetimeLocalValue(value: string | Date): string {
+    const d = new Date(value);
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 }
