@@ -12,7 +12,17 @@ const updateMe = async (req, res) => {
     const updates = {};
     if (name) updates.name = name;
     if (location) updates.location = location;
-    if (volunteerProfile) updates.volunteerProfile = volunteerProfile;
+    if (volunteerProfile) {
+      if (volunteerProfile.capabilities !== undefined) {
+        updates['volunteerProfile.capabilities'] = volunteerProfile.capabilities;
+      }
+      if (volunteerProfile.radius !== undefined) {
+        updates['volunteerProfile.radius'] = volunteerProfile.radius;
+      }
+      if (volunteerProfile.isAvailable !== undefined) {
+        updates['volunteerProfile.isAvailable'] = volunteerProfile.isAvailable;
+      }
+    }
     const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true, runValidators: true });
     res.json(user);
   } catch (err) {

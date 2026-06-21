@@ -66,7 +66,9 @@ const getMyRequests = async (req, res) => {
 
 const getMyClaimedRequests = async (req, res) => {
   try {
-    const requests = await Request.find({ volunteerId: req.user._id, status: 'locked' }).sort({ createdAt: -1 });
+    const requests = await Request.find({ volunteerId: req.user._id, status: 'locked' })
+      .populate('requesterId', 'name phone profileImage rating')
+      .sort({ createdAt: -1 });
     res.json(requests);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -85,6 +87,8 @@ const getMatchedRequests = async (req, res) => {
     if (!volunteer) return res.status(404).json({ message: 'מתנדב לא נמצא' });
 
     const profile = volunteer.volunteerProfile || {};
+    if (!profile.isAvailable) return res.json([]);
+
     const skills = profile.capabilities || [];
     const radius = profile.radius || 10;
     const coordinates = volunteer.location?.coordinates || [];

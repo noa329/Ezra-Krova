@@ -53,8 +53,13 @@
 
         <mat-card class="empty-card" *ngIf="requests.length === 0">
           <mat-icon>volunteer_activism</mat-icon>
-          <h2>אין התאמות זמינות כרגע</h2>
-          <p>אפשר להרחיב רדיוס, לשנות כישורים או לחזור מאוחר יותר.</p>
+          <h2 *ngIf="volunteer?.availableNow">אין התאמות זמינות כרגע</h2>
+          <h2 *ngIf="volunteer && !volunteer.availableNow">אינך זמין לקבלת בקשות חדשות</h2>
+          <p *ngIf="volunteer?.availableNow">אפשר להרחיב רדיוס, לשנות כישורים או לחזור מאוחר יותר.</p>
+          <p *ngIf="volunteer && !volunteer.availableNow">
+            עדיין ניתן לצפות ולהשלים בקשות שכבר לקחת.
+            <a routerLink="/my-claimed">הבקשות שלקחתי לעזור</a>
+          </p>
         </mat-card>
       </ng-container>
     </main>

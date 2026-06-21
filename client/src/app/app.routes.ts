@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './features/auth/auth.guard';
+import { volunteerAvailableGuard } from './features/volunteer/volunteer-available.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
@@ -47,7 +48,7 @@ export const routes: Routes = [
   },
   {
     path: 'volunteer',
-    canActivate: [authGuard],
+    canActivate: [authGuard, volunteerAvailableGuard],
     loadComponent: () => import('./features/volunteer/volunteer-dashboard/volunteer-dashboard.component').then(m => m.VolunteerDashboardComponent),
   },
   {

@@ -6,9 +6,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatMenuModule } from '@angular/material/menu';
-import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../auth/auth.service';
-import { environment } from '../../../../environments/environment';
+import { RequestsService } from '../../requests/requests.service';
+import { VolunteerDashboardService } from '../../volunteer/volunteer-dashboard/volunteer-dashboard.service';
 
 @Component({
   selector: 'app-navbar',
@@ -21,8 +21,8 @@ import { environment } from '../../../../environments/environment';
       <ng-container *ngIf="auth.isLoggedIn; else notLoggedIn">
         <a mat-button routerLink="/requests" routerLinkActive="active-link">בקשות</a>
         <a mat-button routerLink="/my-requests" routerLinkActive="active-link">שלי</a>
-        <a mat-button routerLink="/volunteer" routerLinkActive="active-link" *ngIf="hasVolunteerProfile">מתנדב</a>
-        <a mat-button routerLink="/my-claimed" routerLinkActive="active-link" *ngIf="hasVolunteerProfile">לקחתי לעזור</a>
+        <a mat-button routerLink="/volunteer" routerLinkActive="active-link" *ngIf="hasVolunteerProfile && isAvailable">מתנדב</a>
+        <a mat-button routerLink="/my-claimed" routerLinkActive="active-link" *ngIf="showMyClaimedLink">לקחתי לעזור</a>
         <a mat-button routerLink="/admin" routerLinkActive="active-link" *ngIf="auth.isAdmin">אדמין</a>
         <mat-slide-toggle [checked]="isAvailable" (change)="toggleAvailability($event.checked)" color="accent" class="avail-toggle">
           {{ isAvailable ? 'זמין' : 'לא זמין' }}
@@ -51,21 +51,40 @@ import { environment } from '../../../../environments/environment';
 })
 export class NavbarComponent implements OnInit {
   isAvailable = false;
+  hasClaimedRequests = false;
 
-  constructor(public auth: AuthService, private http: HttpClient) {}
+  constructor(
+    public auth: AuthService,
+    private requests: RequestsService,
+    private volunteerDashboard: VolunteerDashboardService,
+  ) {}
 
   get hasVolunteerProfile() { return !!(this.auth.currentUser?.volunteerProfile?.capabilities?.length); }
+  get showMyClaimedLink() { return this.hasVolunteerProfile || this.hasClaimedRequests; }
 
   ngOnInit() {
     this.isAvailable = this.auth.currentUser?.volunteerProfile?.isAvailable || false;
-    this.auth.currentUser$.subscribe(u => { this.isAvailable = u?.volunteerProfile?.isAvailable || false; });
+    this.auth.currentUser$.subscribe(u => {
+      this.isAvailable = u?.volunteerProfile?.isAvailable || false;
+      if (u) this.loadClaimedRequests();
+    });
+    if (this.auth.isLoggedIn) this.loadClaimedRequests();
   }
 
   toggleAvailability(val: boolean) {
+    const userId = this.auth.currentUser?._id;
+    if (!userId) return;
     this.isAvailable = val;
-    this.http.put(`${environment.apiUrl}/users/me`, { volunteerProfile: { isAvailable: val } }).subscribe({
+    this.volunteerDashboard.updateAvailability(userId, val).subscribe({
       next: () => this.auth.refreshUser().subscribe(),
       error: () => { this.isAvailable = !val; },
+    });
+  }
+
+  private loadClaimedRequests() {
+    this.requests.getMyClaimed().subscribe({
+      next: (requests) => { this.hasClaimedRequests = requests.length > 0; },
+      error: () => { this.hasClaimedRequests = false; },
     });
   }
 }
