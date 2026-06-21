@@ -8,9 +8,24 @@ const parsePreferredTime = (value) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
+const PREFERRED_TIME_IN_PAST_MESSAGE = 'מועד מועדף לא יכול להיות בעבר';
+
+const assertPreferredTimeNotInPast = (preferredTime) => {
+  const parsed = parsePreferredTime(preferredTime);
+  if (!parsed) return null;
+  if (parsed.getTime() < Date.now()) {
+    return PREFERRED_TIME_IN_PAST_MESSAGE;
+  }
+  return parsed;
+};
+
 const createRequest = async (req, res) => {
   try {
     const { category, description, location, urgency, city, preferredTime } = req.body;
+    const parsedPreferredTime = assertPreferredTimeNotInPast(preferredTime);
+    if (typeof parsedPreferredTime === 'string') {
+      return res.status(400).json({ message: parsedPreferredTime });
+    }
     const request = await Request.create({
       requesterId: req.user._id,
       category,
@@ -18,7 +33,7 @@ const createRequest = async (req, res) => {
       location,
       urgency,
       city: city || '',
-      preferredTime: parsePreferredTime(preferredTime),
+      preferredTime: parsedPreferredTime,
     });
     const io = req.app.get('io');
     if (io) io.emit('new-request', request);
@@ -149,7 +164,13 @@ const updateRequest = async (req, res) => {
   try {
     const { category, description, location, urgency, city, preferredTime } = req.body;
     const update = { category, description, location, urgency, city: city || '' };
-    if (preferredTime !== undefined) update.preferredTime = parsePreferredTime(preferredTime);
+    if (preferredTime !== undefined) {
+      const parsedPreferredTime = assertPreferredTimeNotInPast(preferredTime);
+      if (typeof parsedPreferredTime === 'string') {
+        return res.status(400).json({ message: parsedPreferredTime });
+      }
+      update.preferredTime = parsedPreferredTime;
+    }
     const request = await Request.findOneAndUpdate(
       { _id: req.params.id, requesterId: req.user._id },
       update,
