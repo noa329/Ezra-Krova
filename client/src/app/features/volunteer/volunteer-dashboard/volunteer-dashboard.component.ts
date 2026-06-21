@@ -56,6 +56,7 @@ export class VolunteerDashboardComponent implements OnInit, OnDestroy {
   savingFilters = false;
   volunteerId = '';
   private socketSub?: Subscription;
+  private authSub?: Subscription;
 
   constructor(
     private auth: AuthService,
@@ -73,6 +74,17 @@ export class VolunteerDashboardComponent implements OnInit, OnDestroy {
     }
     this.volunteerId = userId;
     this.load();
+    this.authSub = this.auth.currentUser$.subscribe((user) => {
+      if (!this.volunteer || !user) return;
+      const isAvailable = Boolean(user.volunteerProfile?.isAvailable);
+      const changed = this.volunteer.availableNow !== isAvailable;
+      this.volunteer.availableNow = isAvailable;
+      if (!isAvailable) {
+        this.requests = [];
+      } else if (changed) {
+        this.loadMatches();
+      }
+    });
     this.socketSub = this.socket.onNewRequest().subscribe(() => this.loadMatches());
     this.push.subscribe().then((ok) => {
       if (ok) this.snack.open('התראות push הופעלו', 'סגור', { duration: 2500 });
@@ -81,6 +93,7 @@ export class VolunteerDashboardComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.socketSub?.unsubscribe();
+    this.authSub?.unsubscribe();
   }
 
   load() {
@@ -130,7 +143,10 @@ export class VolunteerDashboardComponent implements OnInit, OnDestroy {
     this.volunteer.availableNow = availableNow;
     this.savingFilters = true;
     this.dashboard.updateAvailability(this.volunteerId, availableNow).subscribe({
-      next: (volunteer) => this.afterFilterSaved(volunteer),
+      next: (volunteer) => {
+        this.afterFilterSaved(volunteer);
+        this.auth.refreshUser().subscribe();
+      },
       error: (err) => {
         if (this.volunteer) this.volunteer.availableNow = previous;
         this.handleFilterError(err);

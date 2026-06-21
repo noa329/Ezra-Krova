@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -57,6 +57,7 @@ export class NavbarComponent implements OnInit {
     public auth: AuthService,
     private requests: RequestsService,
     private volunteerDashboard: VolunteerDashboardService,
+    private router: Router,
   ) {}
 
   get hasVolunteerProfile() { return !!(this.auth.currentUser?.volunteerProfile?.capabilities?.length); }
@@ -76,7 +77,12 @@ export class NavbarComponent implements OnInit {
     if (!userId) return;
     this.isAvailable = val;
     this.volunteerDashboard.updateAvailability(userId, val).subscribe({
-      next: () => this.auth.refreshUser().subscribe(),
+      next: () => {
+        this.auth.refreshUser().subscribe();
+        if (!val && this.router.url.startsWith('/volunteer')) {
+          this.router.navigate(['/my-claimed']);
+        }
+      },
       error: () => { this.isAvailable = !val; },
     });
   }
